@@ -17,34 +17,38 @@ Margs is simply a map representing how inputs to our program should look. Margs 
 type margs = map[string]any
 ```
 
+So that a sensible input if you were building git might look like this:
+
+```go
+margs := map[string]any{
+    "subCommand": "fetch",
+    "repo": "/some/folder",
+    "branch": "main",
+    "remote": "origin",
+    "verbose:" false
+}
+```
+
 ## Flargs
 
-The Flargs interface simple exists to house and call a FlargParser, which is a function that converts `[]string` to a `marg`.
+The Flargs interface houses and calls a FlargParser, which is a function that converts `[]string` to a `marg`.
 
-It also returns a tail (`[]string`), reprenting those arguments that this parser didn't care about.
+It also returns a tail (`[]string`), reprenting those arguments that this parser didn't care about. This can be used to allow one command to pass-off execution to another (ie: chaining).
 
-This can be used to allow one command to pass-off execution to another.
-
-`Flargs.Parse([]string)` will return a well-formed `map[string]any`, the tail, and an error.
 
 ## Commands
 
-A command takes in fully-formed Margs, and has access to en Environment which it uses to write to and read from.
-It can be run with `Command.Run(margs)`.
-
-A command does not know or care about arguments in `[]string` form.
-
-A well-haved Flags command will not write to or read from anything outside its Environment.
+A Command takes in fully-formed Margs, and has access to en Environment which it uses to write to and read from. A Command does not know or care about arguments in `[]string` form. A well-behaved Command will not write to or read from anything outside its Environment.
 
 ```go
-// not well-behaved
+// badly behaved ☹
 if os.Getenv("USER") == "sam" {
 	fmt.Println("Sam, I am")
 }
 
-// well-behaved
+// well behaved ☺
 if env.Variables["USER"] == "sam" {
-	fmt.Sprintln(env.OutputStream, "Sam, I am")
+	fmt.Fprintln(env.OutputStream, "Sam, I am")
 }
 ```
 
