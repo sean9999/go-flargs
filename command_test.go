@@ -1,4 +1,4 @@
-package platoon_test
+package flargs_test
 
 import (
 	"bytes"
@@ -8,14 +8,14 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/sean9999/go-platoon"
+	"github.com/sean9999/go-flargs"
 )
 
 type margs = map[string]any
 
 func TestNewCommand(t *testing.T) {
 
-	env := &platoon.Environment{
+	env := &flargs.Environment{
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
@@ -25,7 +25,7 @@ func TestNewCommand(t *testing.T) {
 	}
 
 	//	the command
-	fn := func(env *platoon.Environment, margs map[string]any) error {
+	fn := func(env *flargs.Environment, margs margs) error {
 		j, err := json.Marshal(margs)
 		if err != nil {
 			return err
@@ -34,7 +34,7 @@ func TestNewCommand(t *testing.T) {
 		return nil
 	}
 
-	cmd := platoon.NewCommand(env, fn)
+	cmd := flargs.NewCommand(env, fn)
 
 	//	the margs
 	m := map[string]any{
@@ -81,7 +81,7 @@ func Example_subcommand() {
 
 	rootParser := func(tokens []string) (margs, []string, error) {
 		if tokens[0] != "busybox" {
-			err := platoon.NewPlatoonError("first command is not busybox", nil)
+			err := flargs.NewFlargError("first command is not busybox", nil)
 			return nil, nil, err
 		}
 		tail := tokens[1:]
@@ -97,7 +97,7 @@ func Example_subcommand() {
 	gitParser := func(tokens []string) (margs, []string, error) {
 		m := map[string]any{}
 		if tokens[0] != "git" {
-			return nil, nil, platoon.NewPlatoonError(fmt.Sprintf("subcommand %q is not %q", tokens[0], "git"), nil)
+			return nil, nil, flargs.NewFlargError(fmt.Sprintf("subcommand %q is not %q", tokens[0], "git"), nil)
 		}
 		fset := *flag.NewFlagSet("git", flag.ContinueOnError)
 		fset.Func("work-tree", "git work tree", func(s string) error {

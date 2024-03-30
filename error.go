@@ -1,15 +1,15 @@
-package platoon
+package flargs
 
 import "fmt"
 
-// PlatoonError should be used for all errors in this package
+// FlargError should be used for all errors in this package
 // It can (and should) wrap other errors
-type PlatoonError struct {
+type FlargError struct {
 	msg   string
 	child error
 }
 
-func (pe *PlatoonError) Error() string {
+func (pe *FlargError) Error() string {
 	if pe.child == nil {
 		return pe.msg
 	} else {
@@ -17,12 +17,12 @@ func (pe *PlatoonError) Error() string {
 	}
 }
 
-func (pe *PlatoonError) Unwrap() error {
+func (pe *FlargError) Unwrap() error {
 	return pe.child
 }
 
-func NewPlatoonError(msg string, childError error) *PlatoonError {
-	pe := PlatoonError{
+func NewFlargError(msg string, childError error) *FlargError {
+	pe := FlargError{
 		msg:   msg,
 		child: childError,
 	}

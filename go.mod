@@ -1,4 +1,3 @@
-module github.com/sean9999/go-platoon
+module github.com/sean9999/go-flargs
 
-go 1.23
-
+go 1.22.1

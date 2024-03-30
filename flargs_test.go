@@ -1,31 +1,32 @@
-package platoon_test
+package flargs_test
 
 import (
 	"errors"
 	"flag"
 	"fmt"
 	"maps"
+
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/sean9999/go-platoon"
+	"github.com/sean9999/go-flargs"
 )
 
 type row struct {
 	inputs          []string
-	parseFunc       platoon.FlargsParseFunc
+	parseFunc       flargs.FlargsParseFunc
 	expectMap       map[string]any
 	expectRemainder []string
 	expectError     error
 }
 
-var ErrInvalidFlag error = platoon.NewPlatoonError("platoon error", errors.New("invalid flag"))
+var ErrInvalidFlag error = flargs.NewFlargError("platoon error", errors.New("invalid flag"))
 
 func TestNewFlargs(t *testing.T) {
 
-	var ErrPlatoon *platoon.PlatoonError
+	var ErrPlatoon *flargs.FlargError
 
 	parseFn := func(args []string) (map[string]any, []string, error) {
 		margs := map[string]any{
@@ -113,7 +114,7 @@ func TestNewFlargs(t *testing.T) {
 	for _, row := range table {
 
 		//fset := flag.NewFlagSet("fset", flag.ContinueOnError)
-		fl := platoon.NewFlargs(parseFn)
+		fl := flargs.NewFlargs(parseFn)
 		m, remainder, err := fl.Parse(row.inputs)
 
 		if err != nil {
@@ -143,7 +144,7 @@ func TestNewFlargs(t *testing.T) {
 func Example_foobar() {
 
 	//	parse foo and bar. Return the remaining args as a tail
-	fooBargs := platoon.NewFlargs(func(args []string) (map[string]any, []string, error) {
+	fooBargs := flargs.NewFlargs(func(args []string) (map[string]any, []string, error) {
 		m := map[string]any{}
 		fs := new(flag.FlagSet)
 		fs.Func("foo", "foo must be a non-empty string", func(s string) error {

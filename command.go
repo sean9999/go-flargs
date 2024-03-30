@@ -1,4 +1,4 @@
-package platoon
+package flargs
 
 // a Command is composed of a [CommandFunction] and an execution [Environment].
 // You can run it with Run(), which expects arguments in the form map[string]any (margs)
