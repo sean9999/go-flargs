@@ -7,7 +7,7 @@ Go Flargs is a package for parsing command-line flags and arguments, and then ru
 3. Provides a nice, sane, clean interface
 4. Is chainable, allowing sub-commands and sub-sub-commands
 
-It's composed of 3 basic components:
+It's composed of 4 basic components:
 
 ## Margs
 
@@ -31,14 +31,17 @@ margs := map[string]any{
 
 ## Flargs
 
-The Flargs interface houses and calls a FlargParser, which is a function that converts `[]string` to a `marg`.
+The Flargs interface houses and calls a FlargParser, which is a function that converts `[]string` to a `marg`. It also returns a tail (`[]string`), reprenting those arguments that this parser didn't care about. This can be used to allow one command to pass-off execution to another (ie: chaining).
 
-It also returns a tail (`[]string`), reprenting those arguments that this parser didn't care about. This can be used to allow one command to pass-off execution to another (ie: chaining).
-
+```go
+type Flargs interface {
+    Parse([]string) (margs, []string, error)
+}
+```
 
 ## Commands
 
-A Command takes in fully-formed Margs, and has access to en Environment which it uses to write to and read from. A Command does not know or care about arguments in `[]string` form. A well-behaved Command will not write to or read from anything outside its Environment.
+A Command takes in fully-formed Margs, and has access to an Environment which it uses to write to and read from. A Command does not know or care about arguments in `[]string` form. That we took care of in the parsing step. A well-behaved Command will not write to or read from anything outside its Environment.
 
 ```go
 // badly behaved ☹
@@ -56,7 +59,15 @@ if env.Variables["USER"] == "sam" {
 ## Environment
 
 An execution environment representing all the inputs and outputs a CLI should have.
-Testing environments will have different inputs and outputs than the CLI proper.
+
+```go
+type Environment struct {
+	InputStream  io.Reader
+	OutputStream io.ReadWriter
+	ErrorStream  io.ReadWriter
+	Variables    map[string]string
+}
+```
 
 # Getting Started
 
