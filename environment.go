@@ -2,6 +2,7 @@ package flargs
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io"
 	"os"
 )
@@ -13,6 +14,7 @@ type Environment struct {
 	InputStream  io.Reader
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
+	Randomness   io.Reader
 	Variables    map[string]string
 }
 
@@ -21,6 +23,7 @@ func NewCLIEnvironment() *Environment {
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
+		Randomness:   rand.Reader,
 		Variables: map[string]string{
 			"PLATOON_VERSION":         "v0.1.0",
 			"PLATOON_EXE_ENVIRONMENT": "CLI",
@@ -34,6 +37,7 @@ func NewTestingEnvironment() *Environment {
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
+		Randomness:   rand.Reader,
 		Variables: map[string]string{
 			"PLATOON_VERSION":         "v0.1.0",
 			"PLATOON_EXE_ENVIRONMENT": "TESTING",
