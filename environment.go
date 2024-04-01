@@ -25,8 +25,8 @@ func NewCLIEnvironment() *Environment {
 		ErrorStream:  os.Stderr,
 		Randomness:   rand.Reader,
 		Variables: map[string]string{
-			"PLATOON_VERSION":         "v0.1.0",
-			"PLATOON_EXE_ENVIRONMENT": "CLI",
+			"FLARGS_VERSION":         "v0.1.0",
+			"FLARGS_EXE_ENVIRONMENT": "CLI",
 		},
 	}
 	return &env
@@ -39,8 +39,8 @@ func NewTestingEnvironment() *Environment {
 		ErrorStream:  new(bytes.Buffer),
 		Randomness:   rand.Reader,
 		Variables: map[string]string{
-			"PLATOON_VERSION":         "v0.1.0",
-			"PLATOON_EXE_ENVIRONMENT": "TESTING",
+			"FLARGS_VERSION":         "v0.1.0",
+			"FLARGS_EXE_ENVIRONMENT": "TESTING",
 		},
 	}
 	return &env

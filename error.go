@@ -2,8 +2,7 @@ package flargs
 
 import "fmt"
 
-// FlargError should be used for all errors in this package
-// It can (and should) wrap other errors
+// FlargError wraps real errors, so you can identify it with errors.Is()
 type FlargError struct {
 	msg   string
 	child error
