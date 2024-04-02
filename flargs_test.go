@@ -22,7 +22,7 @@ func TestFlargs(t *testing.T) {
 
 	goMod, _ := os.Open("go.mod")
 
-	var fparse flargs.FlargsParseFunc[*conf] = func(args []string) (*conf, []string, error) {
+	var fparse flargs.ParseFunc[*conf] = func(args []string) (*conf, []string, error) {
 		conf := new(conf)
 		fset := flag.NewFlagSet("flags", flag.ContinueOnError)
 		fset.Func("colour", "favourite colour", func(s string) error {
