@@ -11,7 +11,7 @@ import (
 // In the context of a CLI, these would be [os.StdIn], [os.StdOut], etc
 // In the context of a test-suite, they would probably be [bytes.Buffer]
 type Environment struct {
-	InputStream  io.Reader
+	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
 	Randomness   io.Reader
