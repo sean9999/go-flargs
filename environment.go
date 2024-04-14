@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"io"
 	"os"
+	"strings"
 )
 
 // Enviroment is an execution environment for a Command.
@@ -18,29 +19,43 @@ type Environment struct {
 	Variables    map[string]string
 }
 
+// NewCLIEnvironment peoduces an Environment suitable for a CLI
 func NewCLIEnvironment() *Environment {
+	variables := map[string]string{
+		"FLARGS_VERSION":         "v0.1.1",
+		"FLARGS_EXE_ENVIRONMENT": "cli",
+	}
+	kvs := os.Environ()
+	//	import environment
+	for _, kv := range kvs {
+		parts := strings.Split(kv, "=")
+		if len(parts) == 2 {
+			variables[string(parts[0])] = string(parts[1])
+		}
+	}
+
 	env := Environment{
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
 		Randomness:   rand.Reader,
-		Variables: map[string]string{
-			"PLATOON_VERSION":         "v0.1.0",
-			"PLATOON_EXE_ENVIRONMENT": "CLI",
-		},
+		Variables:    variables,
 	}
 	return &env
 }
 
-func NewTestingEnvironment() *Environment {
+// NewTestingEnvironment produces an [Environment] suitable for testing.
+// Pass in a "randomnessProvider" that offers a level of determinism that works for you.
+// For good ole fashioned regular randomness, pass in [rand.Reader]
+func NewTestingEnvironment(randomnessProvider io.Reader) *Environment {
 	env := Environment{
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
-		Randomness:   rand.Reader,
+		Randomness:   randomnessProvider,
 		Variables: map[string]string{
-			"PLATOON_VERSION":         "v0.1.0",
-			"PLATOON_EXE_ENVIRONMENT": "TESTING",
+			"FLARGS_VERSION":         "v0.1.1",
+			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
 	}
 	return &env

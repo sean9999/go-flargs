@@ -9,6 +9,7 @@ type Command interface {
 // CommandFunction is the function that executes via Run()
 // it should send success data to Environment.OutputStream
 // and error data to Environment.ErrorStream
+// the error it returns should _not_ be so handled. That's for lifecycle management.
 type CommandFunction func(*Environment, margs) error
 
 // command implements Command

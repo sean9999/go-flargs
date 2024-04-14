@@ -2,6 +2,7 @@ package flargs_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -15,16 +16,9 @@ type margs = map[string]any
 
 func TestNewCommand(t *testing.T) {
 
-	env := &flargs.Environment{
-		InputStream:  new(bytes.Buffer),
-		OutputStream: new(bytes.Buffer),
-		ErrorStream:  new(bytes.Buffer),
-		Variables: map[string]string{
-			"RUN_CONTEXT": "go test",
-		},
-	}
+	env := flargs.NewTestingEnvironment(rand.Reader)
 
-	//	the command
+	//	this command simply outputs its flargs in JSON format
 	fn := func(env *flargs.Environment, margs margs) error {
 		j, err := json.Marshal(margs)
 		if err != nil {
@@ -42,13 +36,10 @@ func TestNewCommand(t *testing.T) {
 		"bat": "bing",
 	}
 
-	want, err := json.Marshal(m)
-	if err != nil {
-		t.Error(err)
-	}
+	want, _ := json.Marshal(m)
 
-	//	run the command with margs
-	err = cmd.Run(m)
+	//	run the command
+	err := cmd.Run(m)
 	if err != nil {
 		t.Error(err)
 	}
