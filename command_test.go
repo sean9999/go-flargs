@@ -1,116 +1,237 @@
 package flargs_test
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/rand"
-	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
-	"slices"
+	"io"
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/sean9999/go-flargs"
+	"k8s.io/utils/diff"
 )
 
-type margs = map[string]any
+var goWorkUpper = strings.TrimSpace(`
+GO 1.22.1
 
-func TestNewCommand(t *testing.T) {
+USE .
+`)
 
+var humansAndGoWork = strings.TrimSpace(`
+/* ME */
+
+Name: Sean Macdonald
+Site: https://www.seanmacdonald.ca
+go 1.22.1
+
+use .
+`)
+
+var humansAndGoWorkNumbered = strings.TrimSpace(`
+1.	/* ME */
+2.	
+3.	Name: Sean Macdonald
+4.	Site: https://www.seanmacdonald.ca
+5.	go 1.22.1
+6.	
+7.	use .
+`)
+
+func TestNewCommand_cat(t *testing.T) {
+
+	//	input object suitable for passing into cat
+	type catConf struct {
+		files         []*os.File
+		withNumbering bool
+	}
+
+	//	argument parser for catFn
+	var catFlagParser flargs.ParseFunc[*catConf] = func(args []string) (*catConf, []string, error) {
+		conf := new(catConf)
+		conf.files = []*os.File{}
+		fset := flag.NewFlagSet("flargs", flag.ContinueOnError)
+		fset.BoolVar(&conf.withNumbering, "n", false, "use numbering")
+		err := fset.Parse(args)
+		if err != nil {
+			return nil, fset.Args(), err
+		}
+		if len(fset.Args()) < 1 {
+			return nil, fset.Args(), errors.New("must specify at least one file")
+		}
+		for _, arg := range fset.Args() {
+			f, e := os.Open(arg)
+			if e != nil {
+				return nil, fset.Args(), fmt.Errorf("Could not open %q: %w", arg, e)
+			}
+			conf.files = append(conf.files, f)
+		}
+		//	there should be no remaining args because we're consuming them all
+		return conf, []string{}, nil
+	}
+
+	//	the cat function
+	catFn := func(env *flargs.Environment, input *catConf) error {
+		var lastKnownError error
+		line := 0
+		for _, f := range input.files {
+			defer f.Close()
+
+			if input.withNumbering {
+				scanner := bufio.NewScanner(f)
+
+				for scanner.Scan() {
+					line++
+					fmt.Fprintf(env.OutputStream, "%d.\t%s\n", line, scanner.Text())
+				}
+			} else {
+				_, err := f.WriteTo(env.OutputStream)
+				if err != nil {
+					lastKnownError = err
+					//	should we panic and die, or continue on?
+					//	let's be nice and continue on.
+					fmt.Fprintln(env.ErrorStream, err)
+				}
+			}
+		}
+		return lastKnownError
+	}
+
+	//	testing *Environment
 	env := flargs.NewTestingEnvironment(rand.Reader)
 
-	//	this command simply outputs its flargs in JSON format
-	fn := func(env *flargs.Environment, margs margs) error {
-		j, err := json.Marshal(margs)
-		if err != nil {
-			return err
+	//	catCmd is catFn + env
+	catCmd := flargs.NewCommand(env, catFn)
+
+	//	uppercaseify
+	//no input needed
+
+	upperFn := func(env *flargs.Environment, _ *struct{}) error {
+		plainText := new(bytes.Buffer)
+		plainText.ReadFrom(env.InputStream)
+		upperText := strings.ToUpper(plainText.String())
+		_, err := env.OutputStream.Write([]byte(upperText))
+		return err
+	}
+
+	upperCmd := flargs.NewCommand(env, upperFn)
+
+	t.Run("cat some files", func(t *testing.T) {
+
+		type col struct {
+			inputArgs  []string
+			wantErr    error
+			wantResult string
 		}
-		env.OutputStream.Write(j)
-		return nil
-	}
 
-	cmd := flargs.NewCommand(env, fn)
-
-	//	the margs
-	m := map[string]any{
-		"foo": "bar",
-		"bat": "bing",
-	}
-
-	want, _ := json.Marshal(m)
-
-	//	run the command
-	err := cmd.Run(m)
-	if err != nil {
-		t.Error(err)
-	}
-
-	got := bytes.NewBuffer(nil)
-	got.ReadFrom(env.OutputStream)
-
-	if !slices.Equal(want, got.Bytes()) {
-		t.Error(got.String(), "\t", string(want))
-	}
-
-}
-
-func Example_subcommand() {
-
-	//	let's implement a utility with a subcommand like this
-	//	busybox git --work-tree=/some/work/tree checkout --branch=main https://github.com/sean9999/go-platoon
-
-	//	if first subcommand is not busybox, die
-	//	if second subcommand is not "git", exit with "unsupported" warning
-
-	//	git takes a margs that may include a "work-tree" prop, or it may simply be empty
-	//	it should return ["checkout", ...] as a tail
-
-	//	checkout sub-subcommand should have a margs of "branch" and "repo"
-	//	repo is not a flag. It's an arg.
-
-	type margs = map[string]any
-	inputParams := []string{"busybox", "git", "--work-tree=/some/folder", "checkout", "https://github.com/sean9999/go-platoon"}
-
-	rootParser := func(tokens []string) (margs, []string, error) {
-		if tokens[0] != "busybox" {
-			err := flargs.NewFlargError("first command is not busybox", nil)
-			return nil, nil, err
+		table := []col{
+			{[]string{"humans.txt", "go.work"}, nil, humansAndGoWork},
+			{[]string{"-n", "humans.txt", "go.work"}, nil, humansAndGoWorkNumbered},
 		}
-		tail := tokens[1:]
-		return nil, tail, nil
-	}
 
-	busyBoxMarg, busyboxRemainder, err := rootParser(inputParams)
+		for _, row := range table {
+			konf, _, err := catFlagParser(row.inputArgs)
 
-	fmt.Println("busybox", busyBoxMarg)
-	fmt.Println("busybox", busyboxRemainder)
-	fmt.Println("busybox", err)
+			if err != nil {
+				if !errors.Is(err, row.wantErr) {
+					t.Errorf("wanted %s but got %s", row.wantErr, err)
+					t.FailNow()
+				}
+			} else {
+				if row.wantErr != nil {
+					t.Errorf("wanted error %s but got nil", row.wantErr)
+					t.FailNow()
+				}
+				catCmd.Run(konf)
+				//	compare output to expected
+				gotBuff := new(bytes.Buffer)
+				gotBuff.ReadFrom(catCmd.Env.OutputStream)
+				got := strings.TrimSpace(gotBuff.String())
+				if row.wantResult != got {
+					t.Error(diff.StringDiff(got, row.wantResult))
+				}
+			}
 
-	gitParser := func(tokens []string) (margs, []string, error) {
-		m := map[string]any{}
-		if tokens[0] != "git" {
-			return nil, nil, flargs.NewFlargError(fmt.Sprintf("subcommand %q is not %q", tokens[0], "git"), nil)
 		}
-		fset := *flag.NewFlagSet("git", flag.ContinueOnError)
-		fset.Func("work-tree", "git work tree", func(s string) error {
-			m["workTree"] = s
-			return nil
-		})
-		fset.Parse(tokens[1:])
-		return m, fset.Args(), nil
-	}
 
-	gitMarg, gitsubmoduleParams, err := gitParser(busyboxRemainder)
+	})
 
-	fmt.Println("git", gitMarg)
-	fmt.Println("git", gitsubmoduleParams)
-	fmt.Println("git", err)
+	t.Run("uppercase-ify", func(t *testing.T) {
 
-	// Output:
-	// busybox map[]
-	// busybox [git --work-tree=/some/folder checkout https://github.com/sean9999/go-platoon]
-	// busybox <nil>
-	// git map[workTree:/some/folder]
-	// git [checkout https://github.com/sean9999/go-platoon]
-	// git <nil>
+		type row struct {
+			inputString  string
+			expectError  error
+			expectString string
+		}
+
+		table := []row{
+			{"all your base", nil, "ALL YOUR BASE"},
+		}
+
+		for _, row := range table {
+
+			upperCmd.Env.InputStream.Write([]byte(row.inputString))
+			err := upperCmd.Run(nil)
+			if err == nil {
+
+				gotBuf, err := io.ReadAll(upperCmd.Env.OutputStream)
+				if err != nil {
+					t.Error(err)
+				}
+
+				if string(gotBuf) != row.expectString {
+					t.Errorf("wanted %q but got %q", row.expectString, gotBuf)
+				}
+
+			} else {
+				t.Error(err)
+			}
+
+		}
+
+	})
+
+	t.Run("pipe cat to uppercase-ify", func(t *testing.T) {
+
+		type row struct {
+			inputString  string
+			expectError  error
+			expectString string
+		}
+
+		table := []row{
+			{"go.work", nil, goWorkUpper},
+		}
+
+		for _, row := range table {
+
+			konf, _, err := catFlagParser([]string{row.inputString})
+
+			if err == nil {
+				//	pipe cat to uppcaseify
+				catCmd.Pipe(konf, upperCmd.Env)
+				upperCmd.Run(nil)
+
+				resultBytes, err := io.ReadAll(upperCmd.Env.OutputStream)
+				if err != nil {
+					t.Error(err)
+				}
+				resultString := strings.TrimSpace(string(resultBytes))
+
+				if resultString != row.expectString {
+					t.Errorf("was expecting %s but got %s", goWorkUpper, resultString)
+				}
+
+			} else {
+				t.Error(err)
+			}
+
+		}
+
+	})
 
 }

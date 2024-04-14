@@ -1,28 +1,40 @@
 package flargs
 
-// a Command is composed of a [CommandFunction] and an execution [Environment].
-// You can run it with Run(), which expects arguments in the form map[string]any (margs)
-type Command interface {
-	Run(margs) error
+import (
+	"io"
+)
+
+// RunFunc executes code against streams defined in *Environment
+type RunFunc[T any] func(*Environment, T) error
+
+// Command is a container for a RunFunc and and *Environment
+type Command[T any] struct {
+	Env     *Environment
+	RunFunc RunFunc[T]
 }
 
-// CommandFunction is the function that executes via Run()
-// it should send success data to Environment.OutputStream
-// and error data to Environment.ErrorStream
-// the error it returns should _not_ be so handled. That's for lifecycle management.
-type CommandFunction func(*Environment, margs) error
-
-// command implements Command
-type command struct {
-	env *Environment
-	exe CommandFunction
+// Run runs the RunFunc against the *Environment
+func (com Command[T]) Run(conf T) error {
+	return com.RunFunc(com.Env, conf)
 }
 
-func NewCommand(env *Environment, exe CommandFunction) Command {
-	cmd := command{env, exe}
-	return &cmd
+func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
+	err := com1.Run(conf1)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(env2.InputStream, com1.Env.OutputStream)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func (com *command) Run(m margs) error {
-	return com.exe(com.env, m)
+// NewCommand creates a new command, taking in T as input
+func NewCommand[T any](env *Environment, runFn RunFunc[T]) Command[T] {
+	com := Command[T]{
+		Env:     env,
+		RunFunc: runFn,
+	}
+	return com
 }

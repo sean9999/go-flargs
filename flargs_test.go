@@ -4,8 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"maps"
-
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -14,169 +13,124 @@ import (
 	"github.com/sean9999/go-flargs"
 )
 
-type row struct {
-	inputs          []string
-	parseFunc       flargs.FlargsParseFunc
-	expectMap       map[string]any
-	expectRemainder []string
-	expectError     error
+var errBadFileName error = errors.New("bad file name")
+
+type conf struct {
+	colour string
+	number float64
+	file   *os.File
 }
 
-var ErrInvalidFlag error = flargs.NewFlargError("platoon error", errors.New("invalid flag"))
+func TestFlargs(t *testing.T) {
 
-func TestNewFlargs(t *testing.T) {
+	goMod, _ := os.Open("go.mod")
 
-	var ErrPlatoon *flargs.FlargError
-
-	parseFn := func(args []string) (map[string]any, []string, error) {
-		margs := map[string]any{
-			"bing": "PINEAPPLE", // set default values here
-		}
-
-		fset := new(flag.FlagSet)
-		fset.Func("foo", "foo dee doo", func(s string) error {
-			margs["foo"] = s
-			return nil
-		})
-		fset.Func("bar", "a bar is a a bar", func(s string) error {
-			//	must begin with the letter "b"
-			ss := strings.Split(s, "")
-			if ss[0] != "b" && ss[0] != "B" {
-				return ErrInvalidFlag
+	var fparse flargs.ParseFunc[*conf] = func(args []string) (*conf, []string, error) {
+		conf := new(conf)
+		fset := flag.NewFlagSet("flags", flag.ContinueOnError)
+		fset.Func("colour", "favourite colour", func(s string) error {
+			//	should be all lowercase and one of red,green,yellow,etc...
+			lstr := strings.ToLower(s)
+			switch lstr {
+			case "red", "green", "blue", "brown", "yellow", "purple", "orange":
+				conf.colour = lstr
+			default:
+				return errors.New("unsupported colour")
 			}
-			margs["bar"] = s
-			return nil
-		})
-		fset.Func("bing", "bing is usually a pineapple", func(s string) error {
-			margs["bing"] = s
 			return nil
 		})
 
-		//	this will hydrate margs
-		err := fset.Parse(args)
-
-		if err != nil {
-			err = fmt.Errorf("arg parse error: %w", err)
-			//err = platoon.NewPlatoonError("arg parse error", err)
-		}
-
-		//	further validation or massaging as needed
-
-		return margs, fset.Args(), err
-	}
-
-	table := []row{
-		{
-			inputs:    []string{"--foo=bonk", "--bar=bink"},
-			parseFunc: parseFn,
-			expectMap: map[string]any{
-				"foo":  "bonk",
-				"bar":  "bink",
-				"bing": "PINEAPPLE",
-			},
-			expectRemainder: []string{},
-			expectError:     nil,
-		},
-		{
-			inputs:    []string{"--foo=bonk", "--bar=TALYHOE"},
-			parseFunc: parseFn,
-			expectMap: map[string]any{
-				"foo":  "bonk",
-				"bing": "PINEAPPLE",
-			},
-			expectRemainder: []string{},
-			expectError:     ErrPlatoon,
-		},
-		{
-			inputs:    []string{"--foo=bonk", "--bar=bink", "--bing=bank"},
-			parseFunc: parseFn,
-			expectMap: map[string]any{
-				"foo":  "bonk",
-				"bar":  "bink",
-				"bing": "bank",
-			},
-			expectRemainder: []string{},
-			expectError:     nil,
-		},
-		{
-			inputs:    []string{"--foo=bonk", "--bar=bink", "darth", "vader"},
-			parseFunc: parseFn,
-			expectMap: map[string]any{
-				"foo":  "bonk",
-				"bar":  "bink",
-				"bing": "PINEAPPLE",
-			},
-			expectRemainder: []string{"darth", "vader"},
-			expectError:     nil,
-		},
-	}
-
-	for _, row := range table {
-
-		//fset := flag.NewFlagSet("fset", flag.ContinueOnError)
-		fl := flargs.NewFlargs(parseFn)
-		m, remainder, err := fl.Parse(row.inputs)
-
-		if err != nil {
-
-			if row.expectError != nil {
-
-				if !errors.As(err, &ErrPlatoon) {
-					t.Error("erros.Is thing was false ", err)
-				}
-
-			}
-
-		}
-
-		if !slices.Equal(remainder, row.expectRemainder) {
-			t.Errorf("remainder was %v", remainder)
-		}
-
-		if !maps.Equal(m, row.expectMap) {
-			t.Errorf("the map we got was %v, but we wanted %v", m, row.expectMap)
-		}
-
-	}
-
-}
-
-func Example_foobar() {
-
-	//	parse foo and bar. Return the remaining args as a tail
-	fooBargs := flargs.NewFlargs(func(args []string) (map[string]any, []string, error) {
-		m := map[string]any{}
-		fs := new(flag.FlagSet)
-		fs.Func("foo", "foo must be a non-empty string", func(s string) error {
-			if len(s) == 0 {
-				return errors.New("foo cannot be zero-length")
-			}
-			m["foo"] = s
-			return nil
-		})
-		fs.Func("bar", "bar must be a number", func(s string) error {
-			i, err := strconv.Atoi(s)
+		fset.Func("number", "floating point number", func(s string) error {
+			//	returns error if string is not convertable to float
+			n, err := strconv.ParseFloat(s, 64)
 			if err == nil {
-				m["bar"] = i
+				conf.number = n
 			}
 			return err
 		})
-		fs.Parse(args)
-		return m, fs.Args(), nil
-	})
+		fset.Parse(args)
+		remainders := fset.Args()
 
-	//	call the above function with command-line args
-	margs, tail, err := fooBargs.Parse([]string{"--foo=HELLO", "--bar=79", "mysubcommand", "myarg"})
+		if len(remainders) < 1 {
+			return nil, remainders, errors.New("a filename argument is needed")
+		}
 
-	fmt.Println(margs["foo"])
-	fmt.Println(margs["bar"])
-	fmt.Println(tail)
-	fmt.Println(err)
+		filePath := remainders[0]
+		fd, err := os.Open(filePath)
+		if err != nil {
+			return nil, remainders[1:], fmt.Errorf("file %q could not be opened (%w)", filePath, errBadFileName)
+		}
+		conf.file = fd
 
-	// Output:
-	// HELLO
-	// 79
-	// [mysubcommand myarg]
-	// <nil>
+		return conf, remainders[1:], err
+	}
+
+	type row struct {
+		inputArgs  []string
+		conf       conf
+		remainders []string
+		err        error
+	}
+	table := []row{
+		{ //	test #1
+			inputArgs:  []string{"--colour=red", "--number=7", "go.mod"},
+			conf:       conf{"red", 7, goMod},
+			remainders: nil,
+			err:        nil,
+		},
+		{ //	test #2
+			inputArgs:  []string{"--colour=red", "--number=7", "go.mod", "fish", "BBQ"},
+			conf:       conf{"red", 7, goMod},
+			remainders: []string{"fish", "BBQ"},
+			err:        nil,
+		},
+		{
+			inputArgs:  []string{"--colour=blue", "--number=7.17", "go.mod", "fish", "BBQ"},
+			conf:       conf{"blue", 7.17, goMod},
+			remainders: []string{"fish", "BBQ"},
+			err:        nil,
+		},
+		{
+			inputArgs:  []string{"--colour=blue", "--number=7.17", "go.mod_x", "fish", "BBQ"},
+			conf:       conf{"blue", 7.17, goMod},
+			remainders: []string{"fish", "BBQ"},
+			err:        errBadFileName,
+		},
+	}
+
+	for _, want := range table {
+		got, gotRemainders, gotErr := fparse(want.inputArgs)
+
+		if gotErr != nil && want.err != nil {
+			if !errors.Is(gotErr, want.err) {
+				t.Fatal(gotErr)
+			}
+		}
+
+		if !slices.Equal(want.remainders, gotRemainders) {
+			//t.Error(gotRemainders)
+			t.Errorf("expected %v but got %v", want.remainders, gotRemainders)
+		}
+
+		if got != nil {
+			if got.colour != want.conf.colour {
+				t.Errorf("wanted %q but got %q", want.conf.colour, got.colour)
+			}
+			if got.number != want.conf.number {
+				t.Errorf("wanted %f but got %f", want.conf.number, got.number)
+			}
+		}
+
+		//	@todo: do inode numbers make more sense here?
+		wantFileName := want.conf.file.Name()
+		gotFileName := goMod.Name()
+		if gotFileName != wantFileName {
+			t.Errorf("wanted %q but got %q", wantFileName, gotFileName)
+		}
+		// if want.conf.file.Fd() != got.file.Fd() {
+		// 	t.Errorf("got %d but wanted %d", got.file.Fd(), want.conf.file.Fd())
+		// }
+
+	}
 
 }
