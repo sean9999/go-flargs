@@ -40,7 +40,7 @@ func NewCLIEnvironment() *Environment {
 		ErrorStream:  os.Stderr,
 		Randomness:   rand.Reader,
 		Variables: map[string]string{
-			"FLARGS_VERSION":         "v0.1.0",
+			"FLARGS_VERSION":         "v0.1.1",
 			"FLARGS_EXE_ENVIRONMENT": "CLI",
 		},
 	}
@@ -57,7 +57,7 @@ func NewTestingEnvironment(randomnessProvider io.Reader) *Environment {
 		ErrorStream:  new(bytes.Buffer),
 		Randomness:   randomnessProvider,
 		Variables: map[string]string{
-			"FLARGS_VERSION":         "v0.1.0",
+			"FLARGS_VERSION":         "v0.1.1",
 			"FLARGS_EXE_ENVIRONMENT": "TESTING",
 		},
 	}

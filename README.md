@@ -1,47 +1,53 @@
 # Go Flargs
 
-Go Flargs is a package for parsing command-line flags and arguments, and then running commands. It has the following design-goals:
+Flargs is an opinionated package for building command-line programs with the following design goals:
 
-1. Is testable
-2. Removes the complexity of argument parsing
-3. Provides a nice, sane, clean interface
-4. Is chainable, allowing sub-commands and sub-sub-commands
+1. Is testable, providing abstractions around stdin, stdout, stderr, etc
+2. Removes complexity of argument parsing
+3. Decouples the act of parsing arguments from the act of consuming inputs
+4. Provides a nice, sane, clean interface
+5. Is chainable and composable, allowing for arbitrarily large and complex apps
+
+Flargs conceives of two lifecycles, cleanly seperated:
+
+1. Parsing flags and args into a sensible structure. You get to define what this looks like.
+2. Running the code. This lifecycle knows nothing about args and flags. It only knows about the sensible structure that was passed to it.
 
 It's composed of 4 basic components:
 
-## Margs
+## ParseFunc
 
-Margs is simply a map representing how inputs to our program should look. Margs are simple key-value pairs whose definition looks like this:
+This is a function taking in a slice of strings (such as `os.Args()`) and producing an object that makes sense for your command (using generics), along with an error, and unparsed arguments (enabling composibility). Its signature is:
 
 ```go
-type margs = map[string]any
+type ParseFunc[T any] func([]string) (T, []string, error)
 ```
 
-So that a sensible input if you were building git might look like this:
+## Environment
+
+An execution environment representing all the inputs and outputs a CLI should need.
 
 ```go
-margs := map[string]any{
-    "subCommand": "fetch",
-    "repo": "/some/folder",
-    "branch": "main",
-    "remote": "origin",
-    "verbose:" false
+type Environment struct {
+	InputStream  io.ReadWriter
+	OutputStream io.ReadWriter
+	ErrorStream  io.ReadWriter
+    Randomness   io.Reader
+	Variables    map[string]string // environment variables
 }
 ```
 
-## Flargs
+## RunFunc
 
-The Flargs interface houses and calls a FlargParser, which is a function that converts `[]string` to a `marg`. It also returns a tail (`[]string`), reprenting those arguments that this parser didn't care about. This can be used to allow one command to pass-off execution to another (ie: chaining).
+This is the meat of the functionality and its signature is:
 
 ```go
-type Flargs interface {
-    Parse([]string) (margs, []string, error)
-}
+type RunFunc[T any] func(*Environment, T) error
 ```
 
-## Commands
+a RunFunc should be hermetic. It should read from `Environment.InputStream` and write to `Environment.Outputsteam`. Although it returns an error, any error information meant to be displayed on a terminal should be sent to `Environment.ErrorStream`.
 
-A Command takes in fully-formed Margs, and has access to an Environment which it uses to write to and read from. A Command does not know or care about arguments in `[]string` form. That we took care of in the parsing step. A well-behaved Command will not write to or read from anything outside its Environment.
+If you violate these principles, you won't have a happy time. You will not be able to take advantage of the true power of Flargs.
 
 ```go
 // badly behaved ☹
@@ -55,97 +61,94 @@ if env.Variables["USER"] == "sam" {
 }
 ```
 
+## Command
 
-## Environment
-
-An execution environment representing all the inputs and outputs a CLI should have.
+A Command is a RunFunc plus an Environment, along with a way to run the former against the latter. It also has a `Pipe()` for composability.
 
 ```go
-type Environment struct {
-	InputStream  io.Reader
-	OutputStream io.ReadWriter
-	ErrorStream  io.ReadWriter
-	Variables    map[string]string
+type Command[T any] struct {
+	Env     *Environment
+	runFunc RunFunc[T]
+}
+
+func (com Command[T]) Run(conf T) error {
+	...
+}
+func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
+	...
 }
 ```
 
 # Getting Started
 
-A simple hello-world program might look like this:
+A simple hello-world program that allows you to swap "world" for something else might look like this:
 
 ```go
 import (
     "github.com/sean9999/go-flargs"
 )
 
-//  a function that parses arguments into a map
-parseFn := func(args []string) (map[string]any, []string, error) {
-    fset := *flag.NewFlagSe("hello world", flag.ContinueOnError)
-    //  set default values
-    m := map[string]any{
-        "name": "world",
-    }
-    fset.Func("name", "the name of the person to greet", func(s string) error {
-        //  passing a blank name will be considered an error
-        if len(s) == 0 {
-            return errors.New("zero length name")
-        }
-        m["name"] = s
-        return nil
-    })
-    err := fset.Parse(args)
-    return m, nil, err
+type conf struct {
+    name string
 }
-helloParser := flargs.NewFlargs()
 
-//  flargs.Parse() gives us nicely formed Margs
-margs, _, _ := helloParser.Parse([]string{"--name=bert"})
+//  this is a flargs.ParseFunc
+parseFn := func(args []string) (*conf, []string, error) {
+    conf := new(conf)
+    //  default value
+    conf.name = "world"
+    fset := flag.NewFlagSet("flargs", flag.ContinueOnError)
+    fset.Func("name", "hello to who?", func(s string) error {
+        if s == "batman" {
+            return errors.New("you cannot say hello to batman")
+        }
+		conf.name = s
+		return nil
+	})
+    err := fset.Parse()
+    return conf, fset.Args(), err
+}
 
-//  An execution environment
-env := flargs.NewCLIEnvironment()
+//  this is a flargs.RunFunc
+helloFn := func(env *flargs.Environment, conf *catConf) error {
+    outputString := fmt.Sprintf("hello, %s")
+    env.OutputStream.Write([]byte(outputString))
+}
 
-//  our hello world command, along with an execution environment
-helloCmd := flargs.NewCommand(env, func(env *Environment, margs map[string]any) error {
-    output := fmt.Sprintf("hello %s", margs["name"])
-    
-    //  this is how commands must output
-    env.OutputSteam.Write(output)
-    return nil
-})
+//  first parse
+conf, _, err := parseFn(os.Args())
+if err != nil {
+    panic(err)
+}
 
-helloCmd.Run(margs)
+//  if all goes well, run
+env := flargs.NewCLIEnvironment();
+cmd := flargs.NewCommand(env, helloFn)
+cmd.Run(conf)
 ```
 
-This might look pretty verbose for a simple CLI. But we have gained some extra power and flexibility. We have massaged our inputs in a way that's more powerful than `flag.Parse()` alone, although we are free to use `flag.Parse()` at will. The inputs to our program take a more natural shape. And testing now is simple:
+This might look pretty verbose for a simple CLI. But we now have a hermetic app that can be easily tested. It can grow in complexity without extra overhead. We've added all the _necessary_ complexity already. To test, we might do this:
 
 ```go
-import (
-	"testing"
+func TestNewCommand_hello(t *testing.T) {
 
-	"github.com/sean9999/go-platoon"
-)
+    //  parse args
+	conf, _, _ := parseFn([]string{"--name", "robin"})
 
-func TestHelloWorld(t *testing.T) {
+    //  run command in testing mode
+	env := flargs.NewTestingEnvironment(nil)
+	cmd := flargs.NewCommand(env, helloFn)
+	cmd.Run(conf)
 
-    //  all the same code, except...
+    //  expected output
+    want := "hello, robin"
 
-    //  *testing* execution environment
-    env := platoon.NewTestingEnvironment()
+    //  actual output
+	got := new(bytes.Buffer)
+	got.ReadFrom(cmd.Env.OutputStream)
 
-    //  will write "hello bert" to env.OutputStream
-    helloCmd.Run(margs)
-
-    want := "hello bert"
-
-    //  read env.OutputStream 
-	buf := bytes.NewBuffer(nil)
-	buf.ReadFrom(env.OutputStream)
-    got := buf.String()
-
-    //  compare
-    if want != got {
-        t.Errorf("got %q but wanted %q", got, want)
+    if want != got.String() {
+        t.Errorf("wanted %q but got %q", want, got.String())
     }
-
 }
 ```

@@ -4,20 +4,21 @@ import (
 	"io"
 )
 
-// RunFunc executes code against streams defined in *Environment
+// RunFunc is the core functionality, accepting T as input
 type RunFunc[T any] func(*Environment, T) error
 
-// Command is a container for a RunFunc and and *Environment
+// a Command is a [RunFunc], along with an [Environment] to operate on.
 type Command[T any] struct {
 	Env     *Environment
-	RunFunc RunFunc[T]
+	runFunc RunFunc[T]
 }
 
-// Run runs the RunFunc against the *Environment
+// Run runs the [RunFunc] against its *[Environment]
 func (com Command[T]) Run(conf T) error {
-	return com.RunFunc(com.Env, conf)
+	return com.runFunc(com.Env, conf)
 }
 
+// Pipe is a convenience method for piping one Command to another
 func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
 	err := com1.Run(conf1)
 	if err != nil {
@@ -30,11 +31,11 @@ func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
 	return nil
 }
 
-// NewCommand creates a new command, taking in T as input
+// NewCommand creates a new Command by combining an [Environment] and [RunFunc]
 func NewCommand[T any](env *Environment, runFn RunFunc[T]) Command[T] {
 	com := Command[T]{
 		Env:     env,
-		RunFunc: runFn,
+		runFunc: runFn,
 	}
 	return com
 }
