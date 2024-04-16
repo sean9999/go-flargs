@@ -1,5 +1,7 @@
 # Go Flargs
 
+<img src="go-flargs-gopher-again.png" alt="go flargs" title="go flargs" height="250" />
+
 Flargs is an opinionated package for building command-line programs with the following design goals:
 
 1. Is testable, providing abstractions around stdin, stdout, stderr, etc
@@ -13,7 +15,9 @@ Flargs conceives of two lifecycles, cleanly seperated:
 1. Parsing flags and args into a sensible structure. You get to define what this looks like.
 2. Running the code. This lifecycle knows nothing about args and flags. It only knows about the sensible structure that was passed to it.
 
-It's composed of 4 basic components:
+You can choose to throw errors early on the parsing stage, if the args and flags don't make sense, or later on in the command execution phase. 
+
+Flargs is composed of 4 basic components:
 
 ## ParseFunc
 
