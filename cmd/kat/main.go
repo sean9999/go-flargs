@@ -83,6 +83,10 @@ func main() {
 		panic(err)
 	}
 
-	cmd.Run(params)
+	err = cmd.Run(params)
+
+	if err != nil {
+		os.Exit(1)
+	}
 
 }

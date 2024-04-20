@@ -2,27 +2,24 @@
 
 <img src="go-flargs-gopher-again.png" alt="go flargs" title="go flargs" height="250" />
 
-Flargs is an opinionated package for building command-line programs with the following design goals:
+Flargs is a simple and lightweight framework for building command-line programs with the following design goals:
 
 1. Is testable, providing abstractions around stdin, stdout, stderr, etc
-2. Make argument parsing more natural
-3. Decouples the act of parsing arguments from the act of consuming inputs
-4. Provides a nice, sane, clean interface
-5. Is chainable and composable, allowing for arbitrarily large and complex apps
-6. Handle piping in a simple and expressive way
+2. Decouples the act of parsing arguments from the act of consuming inputs
+3. Is chainable and composable, allowing for arbitrarily large and complex apps
 
 Flargs conceives of two lifecycles, cleanly seperated:
 
-1. Parsing flags and args into a sensible structure. You get to define what this looks like.
-2. Running the code. This lifecycle knows nothing about args and flags. It only knows about the sensible structure that was passed to it.
-
-You can choose to throw errors early on the parsing stage, if the args and flags don't make sense, or later on in the command execution phase. 
+1. Parsing Flags and Args (flarging). 
+2. Running code based on the flargs created in step 1
 
 Flargs is composed of 4 basic components:
 
 ## ParseFunc
 
-This is a function taking in a slice of strings (such as `os.Args()`) and producing an object that makes sense for your command (using generics), along with an error, and unparsed arguments (enabling composibility). Its signature is:
+A ParseFunc takes in a slice of strings and produces a structure that you define. It consumes some flags and args, and leaves others unparsed, returning them for later parsing. It can return an error indicating the flags and args were insufficient to run your Command.
+
+Its signature is:
 
 ```go
 type ParseFunc[T any] func([]string) (T, []string, error)
@@ -40,6 +37,16 @@ type Environment struct {
     Randomness   io.Reader
 	Variables    map[string]string // environment variables
 }
+```
+
+There are two convenience functions for common cases:
+
+```go
+//  exposes os.Stdin, etc
+cliEnv := NewCLIEnvironment()
+
+//  you can use real randomness, or something deterministic
+testingEnv := NewTestingEnvironment(rand.Reader)
 ```
 
 ## RunFunc
@@ -93,31 +100,33 @@ import (
     "github.com/sean9999/go-flargs"
 )
 
+//  our input structure. we only care about one flag.
 type conf struct {
     name string
 }
 
-//  this is a flargs.ParseFunc
+//  this is our ParseFunc. It returns a *conf
 parseFn := func(args []string) (*conf, []string, error) {
-    conf := new(conf)
+    params := new(conf)
     //  default value
-    conf.name = "world"
+    params.name = "world"
     fset := flag.NewFlagSet("flargs", flag.ContinueOnError)
     fset.Func("name", "hello to who?", func(s string) error {
         if s == "batman" {
             return errors.New("you cannot say hello to batman")
         }
-		conf.name = s
+		params.name = s
 		return nil
 	})
     err := fset.Parse()
-    return conf, fset.Args(), err
+    return params, fset.Args(), err
 }
 
-//  this is a flargs.RunFunc
-helloFn := func(env *flargs.Environment, conf *catConf) error {
-    outputString := fmt.Sprintf("hello, %s")
-    env.OutputStream.Write([]byte(outputString))
+// this is our RunFunc. it says hello to params.name.
+// it writes to env.OutputStream, which in a real CLI is os.Stdout
+helloFn := func(env *flargs.Environment, params *conf) error {
+    fmt.Fprintf(env.OutputStream, "hello, %s", params.name)
+    return nil
 }
 
 //  first parse
@@ -132,7 +141,7 @@ cmd := flargs.NewCommand(env, helloFn)
 cmd.Run(conf)
 ```
 
-This might look pretty verbose for a simple CLI. But we now have a hermetic app that can be easily tested. It can grow in complexity without extra overhead. We've added all the _necessary_ complexity already. To test, we might do this:
+This might look pretty verbose for a simple CLI. But we now have a hermetic app that can be easily tested. It can grow in complexity without extra overhead. To test, we might do this:
 
 ```go
 func TestNewCommand_hello(t *testing.T) {

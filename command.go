@@ -4,7 +4,7 @@ import (
 	"io"
 )
 
-// RunFunc is the core functionality, accepting T as input
+// RunFunc is the core functionality, accepting T as input and operating against an [Environment]
 type RunFunc[T any] func(*Environment, T) error
 
 // a Command is a [RunFunc], along with an [Environment] to operate on.
@@ -18,16 +18,16 @@ func (com Command[T]) Run(conf T) error {
 	return com.runFunc(com.Env, conf)
 }
 
-// Pipe is a convenience method for piping one Command to another
-// env2 is a reference to the Environment that will be used by the next Command
-// Pipe copies bytes from the first Command's Environment.OutputStream to the second Command's Environment.InputStream
-func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
-	err := com1.Run(conf1)
+// Pipe is a convenience method for piping one Command to another.
+// It runs [Run()] and copies `com.Env.OutputStream` to `destEnvironment.InputStream`
+func (com Command[T]) Pipe(conf1 T, destEnvironment *Environment) error {
+	err := com.Run(conf1)
 	if err != nil {
 		return err
 	}
-	_, err = io.Copy(env2.InputStream, com1.Env.OutputStream)
+	_, err = io.Copy(destEnvironment.InputStream, com.Env.OutputStream)
 	if err != nil {
+
 		return err
 	}
 	return nil

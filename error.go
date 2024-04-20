@@ -1,6 +1,5 @@
 package flargs
 
-//go:generate stringer -type ExitCode -trimprefix ExitCode
 type ExitCode uint8
 
 const (

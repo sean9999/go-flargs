@@ -1,7 +1,6 @@
 package flargs_test
 
 import (
-	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -138,11 +137,15 @@ func TestFlargs(t *testing.T) {
 
 func ExampleNewCommand_hello() {
 
+	//	an object that represents the input you need
 	type helloConf struct {
 		name string
 	}
 
-	// this is a flargs.ParseFunc
+	// this is a ParseFunc.
+	// It allows you to pass in a --name flag.
+	// if you pass in "--name=batman" it will panic.
+	// if you pass in no name, it will use "world"
 	parseFn := func(args []string) (*helloConf, []string, error) {
 		conf := new(helloConf)
 		//  default value
@@ -159,7 +162,7 @@ func ExampleNewCommand_hello() {
 		return conf, fset.Args(), err
 	}
 
-	// this is a flargs.RunFunc
+	// this is a flargs.RunFunc. It says hello.
 	helloFn := func(env *flargs.Environment, conf *helloConf) error {
 		outputString := fmt.Sprintf("hello, %s", conf.name)
 		env.OutputStream.Write([]byte(outputString))
@@ -172,10 +175,9 @@ func ExampleNewCommand_hello() {
 	cmd := flargs.NewCommand(env, helloFn)
 	cmd.Run(conf)
 
-	got := new(bytes.Buffer)
-	got.ReadFrom(cmd.Env.OutputStream)
+	got := string(cmd.Env.GetOutput())
 
-	fmt.Println(got.String())
+	fmt.Println(got)
 	// Output: hello, robin
 
 }
