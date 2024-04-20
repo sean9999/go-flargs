@@ -15,5 +15,8 @@ test:
 clean:
 	go clean
 
+docs:
+	pkgsite -open .
+
 publish:
 	GOPROXY=https://goproxy.io,direct go list -m ${REPO}@${SEMVER}

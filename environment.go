@@ -19,6 +19,24 @@ type Environment struct {
 	Variables    map[string]string
 }
 
+func (e Environment) GetOutput() []byte {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(e.OutputStream)
+	return buf.Bytes()
+}
+
+func (e Environment) GetError() []byte {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(e.ErrorStream)
+	return buf.Bytes()
+}
+
+func (e Environment) GetInput() []byte {
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(e.InputStream)
+	return buf.Bytes()
+}
+
 // NewCLIEnvironment peoduces an Environment suitable for a CLI
 func NewCLIEnvironment() *Environment {
 	variables := map[string]string{

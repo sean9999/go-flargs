@@ -19,6 +19,8 @@ func (com Command[T]) Run(conf T) error {
 }
 
 // Pipe is a convenience method for piping one Command to another
+// env2 is a reference to the Environment that will be used by the next Command
+// Pipe copies bytes from the first Command's Environment.OutputStream to the second Command's Environment.InputStream
 func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
 	err := com1.Run(conf1)
 	if err != nil {

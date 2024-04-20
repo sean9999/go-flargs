@@ -5,10 +5,11 @@
 Flargs is an opinionated package for building command-line programs with the following design goals:
 
 1. Is testable, providing abstractions around stdin, stdout, stderr, etc
-2. Removes complexity of argument parsing
+2. Make argument parsing more natural
 3. Decouples the act of parsing arguments from the act of consuming inputs
 4. Provides a nice, sane, clean interface
 5. Is chainable and composable, allowing for arbitrarily large and complex apps
+6. Handle piping in a simple and expressive way
 
 Flargs conceives of two lifecycles, cleanly seperated:
 
@@ -148,11 +149,10 @@ func TestNewCommand_hello(t *testing.T) {
     want := "hello, robin"
 
     //  actual output
-	got := new(bytes.Buffer)
-	got.ReadFrom(cmd.Env.OutputStream)
+	got := cmd.Env.GetOutput()
 
     if want != got.String() {
-        t.Errorf("wanted %q but got %q", want, got.String())
+        t.Errorf("wanted %q but got %q", want, string(got))
     }
 }
 ```

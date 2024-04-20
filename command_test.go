@@ -2,7 +2,6 @@ package flargs_test
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/rand"
 	"errors"
 	"flag"
@@ -108,12 +107,10 @@ func TestNewCommand_cat(t *testing.T) {
 	catCmd := flargs.NewCommand(env, catFn)
 
 	//	uppercaseify
-	//no input needed
-
+	//	no flargs needed
 	upperFn := func(env *flargs.Environment, _ *struct{}) error {
-		plainText := new(bytes.Buffer)
-		plainText.ReadFrom(env.InputStream)
-		upperText := strings.ToUpper(plainText.String())
+		plainText := string(env.GetInput())
+		upperText := strings.ToUpper(plainText)
 		_, err := env.OutputStream.Write([]byte(upperText))
 		return err
 	}
@@ -147,10 +144,9 @@ func TestNewCommand_cat(t *testing.T) {
 					t.FailNow()
 				}
 				catCmd.Run(konf)
+
 				//	compare output to expected
-				gotBuff := new(bytes.Buffer)
-				gotBuff.ReadFrom(catCmd.Env.OutputStream)
-				got := strings.TrimSpace(gotBuff.String())
+				got := strings.TrimSpace(string(catCmd.Env.GetOutput()))
 				if row.wantResult != got {
 					t.Error(diff.StringDiff(got, row.wantResult))
 				}
@@ -161,38 +157,29 @@ func TestNewCommand_cat(t *testing.T) {
 	})
 
 	t.Run("uppercase-ify", func(t *testing.T) {
-
 		type row struct {
 			inputString  string
 			expectError  error
 			expectString string
 		}
-
 		table := []row{
 			{"all your base", nil, "ALL YOUR BASE"},
 		}
-
 		for _, row := range table {
-
 			upperCmd.Env.InputStream.Write([]byte(row.inputString))
 			err := upperCmd.Run(nil)
 			if err == nil {
-
 				gotBuf, err := io.ReadAll(upperCmd.Env.OutputStream)
 				if err != nil {
 					t.Error(err)
 				}
-
 				if string(gotBuf) != row.expectString {
 					t.Errorf("wanted %q but got %q", row.expectString, gotBuf)
 				}
-
 			} else {
 				t.Error(err)
 			}
-
 		}
-
 	})
 
 	t.Run("pipe cat to uppercase-ify", func(t *testing.T) {
@@ -216,22 +203,16 @@ func TestNewCommand_cat(t *testing.T) {
 				catCmd.Pipe(konf, upperCmd.Env)
 				upperCmd.Run(nil)
 
-				resultBytes, err := io.ReadAll(upperCmd.Env.OutputStream)
-				if err != nil {
-					t.Error(err)
-				}
-				resultString := strings.TrimSpace(string(resultBytes))
+				result := strings.TrimSpace(string(upperCmd.Env.GetOutput()))
 
-				if resultString != row.expectString {
-					t.Errorf("was expecting %s but got %s", goWorkUpper, resultString)
+				if result != row.expectString {
+					t.Errorf("was expecting %s but got %s", goWorkUpper, result)
 				}
 
 			} else {
 				t.Error(err)
 			}
-
 		}
-
 	})
 
 }
