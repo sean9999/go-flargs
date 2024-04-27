@@ -6,6 +6,9 @@ SEMVER := $$(git tag --sort=-version:refname | head -n 1)
 info:
 	echo REPO is ${REPO} and SEMVER is ${SEMVER}
 
+build:
+	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/kat ./cmd/kat
+
 tidy:
 	go mod tidy
 

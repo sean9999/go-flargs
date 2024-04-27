@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/sean9999/go-flargs"
 	"k8s.io/utils/diff"
@@ -41,14 +43,14 @@ var humansAndGoWorkNumbered = strings.TrimSpace(`
 7.	use .
 `)
 
-// input object suitable for passing into cat
-type catConf struct {
+// input object suitable for passing into kat
+type katConf struct {
 	fileNames     []string
 	files         []fs.File
 	withNumbering bool
 }
 
-func (c *catConf) Parse(args []string) ([]string, error) {
+func (c *katConf) Parse(args []string) ([]string, error) {
 
 	fset := flag.NewFlagSet("flargs", flag.ContinueOnError)
 	fset.BoolVar(&c.withNumbering, "n", false, "use numbering")
@@ -61,7 +63,7 @@ func (c *catConf) Parse(args []string) ([]string, error) {
 	//	there should be no remaining args because kat consumes them all
 	return []string{}, nil
 }
-func (c *catConf) Load(env *flargs.Environment) error {
+func (c *katConf) Load(env *flargs.Environment) error {
 	c.files = []fs.File{}
 	for _, arg := range c.fileNames {
 		f, e := env.Filesystem.Open(arg)
@@ -76,7 +78,7 @@ func (c *catConf) Load(env *flargs.Environment) error {
 func TestNewCommand_cat(t *testing.T) {
 
 	//	the cat function
-	catFn := func(env *flargs.Environment, input *catConf) error {
+	catFn := func(env *flargs.Environment, input *katConf) error {
 		var lastKnownError error
 		line := 0
 
@@ -110,13 +112,23 @@ func TestNewCommand_cat(t *testing.T) {
 	//	testing Environment
 	env := flargs.NewTestingEnvironment(rand.Reader)
 
-	//	load
+	//	create a filesystem with the files we want
+	mfs := fstest.MapFS{}
+	humansContent, _ := os.ReadFile("humans.txt")
+	goWorkContent, _ := os.ReadFile("go.work")
+	mfs["humans.txt"] = &fstest.MapFile{
+		Data: humansContent,
+	}
+	mfs["go.work"] = &fstest.MapFile{
+		Data: goWorkContent,
+	}
+	env.Filesystem = mfs
 
 	//	catCmd is catFn + env
 	catCmd := flargs.NewCommand(env, catFn)
 
 	//	uppercaseify
-	//	no flargs needed
+	//	no flargs needed. passing nil is ok
 	upperFn := func(env *flargs.Environment, _ flargs.Flarger[any]) error {
 		plainText := string(env.GetInput())
 		upperText := strings.ToUpper(plainText)
@@ -141,7 +153,7 @@ func TestNewCommand_cat(t *testing.T) {
 
 		for _, row := range table {
 
-			konf := new(catConf)
+			konf := new(katConf)
 
 			_, err := konf.Parse(row.inputArgs)
 
@@ -211,18 +223,19 @@ func TestNewCommand_cat(t *testing.T) {
 		}
 
 		for _, row := range table {
-
-			konf := new(catConf)
-
+			konf := new(katConf)
 			_, err := konf.Parse([]string{row.inputString})
-
 			if err == nil {
+
+				konf.Load(env)
 				//	pipe cat to uppcaseify
 				catCmd.Pipe(konf, upperCmd.Env)
+				err = catCmd.Run(konf)
+				if err != nil {
+					t.Error(err)
+				}
 				upperCmd.Run(nil)
-
 				result := strings.TrimSpace(string(upperCmd.Env.GetOutput()))
-
 				if result != row.expectString {
 					t.Errorf("was expecting %s but got %s", goWorkUpper, result)
 				}

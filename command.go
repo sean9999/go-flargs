@@ -13,10 +13,6 @@ type Command[T Flarger[T]] struct {
 	runFunc RunFunc[T]
 }
 
-func (com Command[T]) Load(conf T) error {
-	return conf.Load(com.Env)
-}
-
 // Run runs the [RunFunc] against its *[Environment]
 func (com Command[T]) Run(conf T) error {
 	return com.runFunc(com.Env, conf)
