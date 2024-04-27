@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"crypto/rand"
 	"io"
+	"io/fs"
 	"os"
-	"strings"
+	"testing/fstest"
+
+	"github.com/gogf/gf/v2/os/genv"
 )
 
 // Enviroment is an execution environment for a Command.
@@ -16,6 +19,7 @@ type Environment struct {
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
 	Randomness   io.Reader
+	Filesystem   fs.FS
 	Variables    map[string]string
 }
 
@@ -37,30 +41,22 @@ func (e Environment) GetInput() []byte {
 	return buf.Bytes()
 }
 
-// NewCLIEnvironment peoduces an Environment suitable for a CLI
-func NewCLIEnvironment() *Environment {
-	variables := map[string]string{
-		"FLARGS_VERSION":         "v0.1.1",
-		"FLARGS_EXE_ENVIRONMENT": "cli",
-	}
-	kvs := os.Environ()
-	//	import environment
-	for _, kv := range kvs {
-		parts := strings.Split(kv, "=")
-		if len(parts) == 2 {
-			variables[string(parts[0])] = string(parts[1])
-		}
-	}
+// NewCLIEnvironment produces an Environment suitable for a CLI.
+// It's a helper function with sane defaults.
+func NewCLIEnvironment(baseDir string) *Environment {
+
+	//	import parent env vars
+	vars := genv.MapFromEnv(os.Environ())
+	vars["FLARGS_VERSION"] = "v0.1.1"
+	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
 	env := Environment{
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
 		Randomness:   rand.Reader,
-		Variables: map[string]string{
-			"FLARGS_VERSION":         "v0.1.1",
-			"FLARGS_EXE_ENVIRONMENT": "CLI",
-		},
+		Filesystem:   os.DirFS(baseDir),
+		Variables:    vars,
 	}
 	return &env
 }
@@ -68,15 +64,17 @@ func NewCLIEnvironment() *Environment {
 // NewTestingEnvironment produces an [Environment] suitable for testing.
 // Pass in a "randomnessProvider" that offers a level of determinism that works for you.
 // For good ole fashioned regular randomness, pass in [rand.Reader]
+// If your program doesn't use randomness, just pass in nil.
 func NewTestingEnvironment(randomnessProvider io.Reader) *Environment {
 	env := Environment{
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
 		Randomness:   randomnessProvider,
+		Filesystem:   fstest.MapFS{},
 		Variables: map[string]string{
 			"FLARGS_VERSION":         "v0.1.1",
-			"FLARGS_EXE_ENVIRONMENT": "TESTING",
+			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
 	}
 	return &env
