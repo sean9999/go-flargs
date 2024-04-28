@@ -8,12 +8,25 @@ Flargs is a simple and lightweight framework for building command-line programs 
 2. Decouples the act of parsing arguments from the act of consuming inputs
 3. Is chainable and composable, allowing for arbitrarily large and complex apps
 
-Flargs conceives of two lifecycles, cleanly seperated:
+Flargs conceives of n lifecycles, cleanly seperated:
 
-1. Parsing Flags and Args (flarging). 
-2. Running code based on the flargs created in step 1
+1. *Parsing Flags and Args (flarging)*. This is the act of parsing arguments and flags into a custom structure (a flarg). The step allows no access to the environment.
+2. *Loading flargs*. This step allows access to an environment
+3. *Execution*. This is where your command is run.
+
 
 Flargs is composed of 4 basic components:
+
+## The Flarger Interface
+
+This is your custom object. You can decide what it looks like, but it must satisfy this interface:
+
+```go
+type Flarger[T any] interface {
+	Parse([]string) ([]string, error)
+	Load(*Environment) error
+}
+```
 
 ## ParseFunc
 
@@ -34,19 +47,10 @@ type Environment struct {
 	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
-    Randomness   io.Reader
-	Variables    map[string]string // environment variables
+	Randomness   io.Reader
+	Filesystem   fs.FS
+	Variables    map[string]string
 }
-```
-
-There are two convenience functions for common cases:
-
-```go
-//  exposes os.Stdin, etc
-cliEnv := NewCLIEnvironment()
-
-//  you can use real randomness, or something deterministic
-testingEnv := NewTestingEnvironment(rand.Reader)
 ```
 
 ## RunFunc

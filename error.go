@@ -1,5 +1,7 @@
 package flargs
 
+import "fmt"
+
 type ExitCode uint8
 
 const (
@@ -19,3 +21,21 @@ const (
 	ExitCodeFatalErrorSignal8
 	ExitCodeFatalErrorSignal9
 )
+
+func (ec ExitCode) Error() string {
+	return fmt.Sprintf("exit code: %d", ec)
+}
+
+type FlargError struct {
+	ExitCode
+	UnderlyingError error
+}
+
+func (fe *FlargError) Error() string {
+	return fmt.Sprintf("flargs error: %s", fe.UnderlyingError)
+}
+
+func NewFlargError(exitcode ExitCode, underlying error) *FlargError {
+	fe := &FlargError{exitcode, underlying}
+	return fe
+}

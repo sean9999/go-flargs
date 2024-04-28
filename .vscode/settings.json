@@ -2,5 +2,14 @@
     "editor.fontFamily": "JetBrainsMono Nerd Font",
     "workbench.iconTheme": "vscode-unfancy-file-icons-codicons",
     "workbench.colorTheme": "Gatito Theme",
-    "editor.fontLigatures": true
+    "editor.fontLigatures": true,
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#bc23a0",
+        "activityBar.background": "#0a000080",
+        "activityBar.foreground": "#eeff00",
+        "statusBar.background": "#3d1e0399",
+        "titleBar.activeBackground": "#3d1e0399",
+        "sash.hoverBorder": "#2f7c47",
+        "statusBarItem.remoteBackground": "#bc23a0"
+    }
 }

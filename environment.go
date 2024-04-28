@@ -6,9 +6,8 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"strings"
 	"testing/fstest"
-
-	"github.com/gogf/gf/v2/os/genv"
 )
 
 // Enviroment is an execution environment for a Command.
@@ -44,10 +43,19 @@ func (e Environment) GetInput() []byte {
 // NewCLIEnvironment produces an Environment suitable for a CLI.
 // It's a helper function with sane defaults.
 func NewCLIEnvironment(baseDir string) *Environment {
+	envAsMap := func(envs []string) map[string]string {
+		m := make(map[string]string)
+		i := 0
+		for _, s := range envs {
+			i = strings.IndexByte(s, '=')
+			m[s[0:i]] = s[i+1:]
+		}
+		return m
+	}
 
 	//	import parent env vars
-	vars := genv.MapFromEnv(os.Environ())
-	vars["FLARGS_VERSION"] = "v0.1.1"
+	vars := envAsMap(os.Environ())
+	vars["FLARGS_VERSION"] = "v1.0.1"
 	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
 	env := Environment{
@@ -73,7 +81,7 @@ func NewTestingEnvironment(randomnessProvider io.Reader) *Environment {
 		Randomness:   randomnessProvider,
 		Filesystem:   fstest.MapFS{},
 		Variables: map[string]string{
-			"FLARGS_VERSION":         "v0.1.1",
+			"FLARGS_VERSION":         "v1.0.1",
 			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
 	}

@@ -1,6 +1,9 @@
 package flargs
 
-type Flarger[T any] interface {
-	Parse([]string) ([]string, error)
+// a Flarger is a custom object that represents the state and functionality of your command
+type Flarger interface {
+	Parse([]string) error
 	Load(*Environment) error
+	Run(*Environment) error
+	Args() []string // for remaining args after a parse
 }
