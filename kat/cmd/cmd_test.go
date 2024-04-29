@@ -6,13 +6,14 @@ import (
 	"testing/fstest"
 
 	"github.com/sean9999/go-flargs"
+	"github.com/sean9999/go-flargs/kat"
 )
 
 func TestKat_with_one_arg(t *testing.T) {
 
 	want := []byte("all your base are belong to us.")
 
-	konf := new(KatConf)
+	konf := new(kat.Konf)
 	env := flargs.NewTestingEnvironment(nil)
 	tmpFs := fstest.MapFS{
 		"base.txt": &fstest.MapFile{
@@ -44,7 +45,7 @@ func TestKat_with_one_arg(t *testing.T) {
 
 func TestKat_stdin(t *testing.T) {
 
-	state := new(KatConf)
+	state := new(kat.Konf)
 	want := []byte("all your base are belong to us.")
 	env := flargs.NewTestingEnvironment(nil)
 

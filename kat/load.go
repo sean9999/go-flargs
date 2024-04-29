@@ -1,4 +1,4 @@
-package main
+package kat
 
 import (
 	"io/fs"
@@ -9,7 +9,7 @@ import (
 // now that we have access to Environment
 // let's see if all the strings passed in can be mapped to real files
 // return an error for any non-valid file name.
-func (k *KatConf) Load(env *flargs.Environment) error {
+func (k *Konf) Load(env *flargs.Environment) error {
 	k.files = []fs.File{}
 	for _, fileName := range k.fileNames {
 		fd, err := env.Filesystem.Open(fileName)

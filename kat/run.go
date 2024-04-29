@@ -1,4 +1,4 @@
-package main
+package kat
 
 import (
 	"bufio"
@@ -11,7 +11,7 @@ import (
 // Now we should have an array of real files.
 // We can iterate over them and spit out the contents.
 // We still report an error if there is a problem operating on these real files.
-func (k *KatConf) Run(env *flargs.Environment) error {
+func (k *Konf) Run(env *flargs.Environment) error {
 	var lastKnownError error
 	line := 0
 	//	stdin

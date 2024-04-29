@@ -7,7 +7,8 @@ info:
 	echo REPO is ${REPO} and SEMVER is ${SEMVER}
 
 build:
-	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/kat ./cmd/kat
+	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/kat	./kat/cmd
+	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/rot13	./rot13/cmd
 
 tidy:
 	go mod tidy
