@@ -22,7 +22,8 @@ func (k *KatConf) Args() []string {
 func main() {
 
 	konf := new(KatConf)
-	env := flargs.NewCLIEnvironment("/")
+	//pwd, _ := os.Getwd()
+	env := flargs.NewCLIEnvironment(".")
 	katCmd := flargs.NewCommand(konf, env)
 
 	err := katCmd.ParseAndLoad(os.Args[1:])
@@ -30,7 +31,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = katCmd.LoadAndRun()
+	err = katCmd.Run()
 	if err != nil {
 		os.Exit(2)
 	}

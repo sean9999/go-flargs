@@ -1,0 +1,4 @@
+github.com/joshlf13/rot13 v0.0.0-20140418065450-649d71d2f46f h1:Rh6cJ/Vy2oldk8fDFM/J0BqXWZRu0EDFYV12JWDgBNU=
+github.com/joshlf13/rot13 v0.0.0-20140418065450-649d71d2f46f/go.mod h1:4QMISGmUmWj4M8hYL+X4XYCywWUDziRK9sWCZ21SQio=
+github.com/sean9999/go-real-fs v0.0.2 h1:phBSL8Cl7ZeCKDAHBBd1gURxvWD6PWZbTx9WrodqVYk=
+github.com/sean9999/go-real-fs v0.0.2/go.mod h1:+PveClop1ifLdZ6ix76EXlrBFMDNis4aaepNpqGCLgQ=

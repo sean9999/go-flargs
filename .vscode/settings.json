@@ -5,10 +5,9 @@
     "editor.fontLigatures": true,
     "workbench.colorCustomizations": {
         "activityBar.activeBackground": "#bc23a0",
-        "activityBar.background": "#0a000080",
         "activityBar.foreground": "#eeff00",
-        "statusBar.background": "#3d1e0399",
-        "titleBar.activeBackground": "#3d1e0399",
+        "statusBar.background": "#421f01",
+        "titleBar.activeBackground": "#421f01",
         "sash.hoverBorder": "#2f7c47",
         "statusBarItem.remoteBackground": "#bc23a0"
     }

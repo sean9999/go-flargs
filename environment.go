@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	"testing/fstest"
+
+	realfs "github.com/sean9999/go-real-fs"
 )
 
 // Enviroment is an execution environment for a Command.
@@ -23,9 +25,8 @@ type Environment struct {
 }
 
 func (e Environment) GetOutput() []byte {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(e.OutputStream)
-	return buf.Bytes()
+	buf, _ := io.ReadAll(e.OutputStream)
+	return buf
 }
 
 func (e Environment) GetError() []byte {
@@ -58,12 +59,14 @@ func NewCLIEnvironment(baseDir string) *Environment {
 	vars["FLARGS_VERSION"] = "v1.0.1"
 	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
+	realFs := realfs.New()
+
 	env := Environment{
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
 		Randomness:   rand.Reader,
-		Filesystem:   os.DirFS(baseDir),
+		Filesystem:   realFs,
 		Variables:    vars,
 	}
 	return &env

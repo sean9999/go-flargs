@@ -15,14 +15,16 @@ func (k *KatConf) Run(env *flargs.Environment) error {
 	var lastKnownError error
 	line := 0
 	//	stdin
-	if k.withNumbering {
-		scanner := bufio.NewScanner(env.InputStream)
-		for scanner.Scan() {
-			line++
-			fmt.Fprintf(env.OutputStream, "%d.\t%s\n", line, scanner.Text())
+	if len(k.fileNames) == 0 {
+		if k.withNumbering {
+			scanner := bufio.NewScanner(env.InputStream)
+			for scanner.Scan() {
+				line++
+				fmt.Fprintf(env.OutputStream, "%d.\t%s\n", line, scanner.Text())
+			}
+		} else {
+			io.Copy(env.OutputStream, env.InputStream)
 		}
-	} else {
-		io.Copy(env.OutputStream, env.InputStream)
 	}
 	//	files specified as args
 	for _, f := range k.files {

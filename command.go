@@ -1,6 +1,8 @@
 package flargs
 
-import "io"
+import (
+	"io"
+)
 
 // a Command is a Flarger with an Environment
 type Command struct {
@@ -26,6 +28,7 @@ func (k Command) LoadAndRun() error {
 	if err != nil {
 		return err
 	}
+
 	return k.Run()
 }
 
