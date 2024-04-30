@@ -9,6 +9,7 @@ info:
 build:
 	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/kat	./kat/cmd
 	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/rot13	./rot13/cmd
+	go build -v -ldflags="-X 'main.Version=${SEMVER}' -s -w" -o ./bin/proverbs	./proverbs/cmd
 
 tidy:
 	go mod tidy

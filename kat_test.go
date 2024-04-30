@@ -8,30 +8,26 @@ import (
 	"github.com/sean9999/go-flargs/kat"
 )
 
-func TestKatOneArg(t *testing.T) {
+func TestKat(t *testing.T) {
 
-	noInput := []string{}
 	want := []byte("all your base are belong to us")
-
 	env := flargs.NewTestingEnvironment(nil)
-
 	konf := new(kat.Konf)
-
 	cmd := flargs.NewCommand(konf, env)
+
+	//	pipe to stdin
 	env.InputStream.Write(want)
 
-	err := cmd.ParseAndLoad(noInput)
+	//	no flags. no args
+	err := cmd.ParseAndLoad([]string{})
 	if err != nil {
 		t.Error(err)
 	}
-
 	err = cmd.Run()
 	if err != nil {
 		t.Error(err)
 	}
-
 	got := env.GetOutput()
-
 	if !bytes.Equal(want, got) {
 		t.Errorf("got %s but wanted %s", got, want)
 	}

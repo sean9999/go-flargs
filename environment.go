@@ -2,12 +2,13 @@ package flargs
 
 import (
 	"bytes"
-	"crypto/rand"
 	"io"
 	"io/fs"
+	"math/rand"
 	"os"
 	"strings"
 	"testing/fstest"
+	"time"
 
 	realfs "github.com/sean9999/go-real-fs"
 )
@@ -19,7 +20,7 @@ type Environment struct {
 	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
-	Randomness   io.Reader
+	Randomness   rand.Source
 	Filesystem   fs.FS
 	Variables    map[string]string
 }
@@ -65,7 +66,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
-		Randomness:   rand.Reader,
+		Randomness:   rand.NewSource(time.Now().UnixNano()),
 		Filesystem:   realFs,
 		Variables:    vars,
 	}
@@ -76,7 +77,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 // Pass in a "randomnessProvider" that offers a level of determinism that works for you.
 // For good ole fashioned regular randomness, pass in [rand.Reader]
 // If your program doesn't use randomness, just pass in nil.
-func NewTestingEnvironment(randomnessProvider io.Reader) *Environment {
+func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 	env := Environment{
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
