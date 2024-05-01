@@ -14,8 +14,9 @@ import (
 )
 
 // Enviroment is an execution environment for a Command.
-// In the context of a CLI, these would be [os.StdIn], [os.StdOut], etc
-// In the context of a test-suite, they would probably be [bytes.Buffer]
+// In the context of a CLI, these would be [os.StdIn], [os.StdOut], etc.
+// In the context of a test-suite, you can use [bytes.Buffer] and [fstest.MapFS].
+// For benchmarking, you can use a [NullDevice].
 type Environment struct {
 	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
@@ -90,4 +91,26 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		},
 	}
 	return &env
+}
+
+type NullDevice struct {
+	io.Writer
+}
+
+func (b NullDevice) Read(_ []byte) (int, error) {
+	return 0, nil
+}
+func (b NullDevice) Open(_ string) (fs.File, error) {
+	return nil, nil
+}
+
+func NewNullEnvironment() *Environment {
+	e := Environment{
+		InputStream:  NullDevice{io.Discard},
+		OutputStream: NullDevice{io.Discard},
+		ErrorStream:  NullDevice{io.Discard},
+		Filesystem:   NullDevice{},
+		Variables:    map[string]string{},
+	}
+	return &e
 }

@@ -10,7 +10,7 @@ import (
 func main() {
 
 	params := new(proverbs.Params)
-	env := flargs.NewCLIEnvironment("/")
+	env := flargs.NewCLIEnvironment("")
 	cmd := flargs.NewCommand(params, env)
 	err := cmd.ParseAndLoad(os.Args[1:])
 	if err != nil {

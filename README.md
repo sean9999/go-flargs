@@ -8,35 +8,38 @@ Flargs is a simple and lightweight framework for building command-line programs 
 2. Decouples the act of parsing arguments from the act of consuming inputs
 3. Is chainable and composable, allowing for arbitrarily large and complex apps
 
-Flargs conceives of n lifecycles, cleanly seperated:
+Flargs conceives of 3 lifecycles, cleanly seperated:
 
 1. *Parsing Flags and Args (flarging)*. This is the act of parsing arguments and flags into a custom structure (a flarg). The step allows no access to the environment.
-2. *Loading flargs*. This step allows access to an environment
-3. *Execution*. This is where your command is run.
+2. *Loading flargs*. This step allows access to an environment is allows further processing and validating.
+3. *Execution*. This is where your command is run. It runs against the object you created in step 1 and 2.
 
 
-Flargs is composed of 4 basic components:
+Flargs is composed of 3 basic components:
 
-## The Flarger Interface
+## Konf
 
-This is your custom object. You can decide what it looks like, but it must satisfy this interface:
+This is your custom object which your app will run against. It takes any shape you want, but you must embed `flargs.StateMachine`:
+
+```go
+type myApiClient struct {
+    hostname string
+    port int
+    path string
+    flargs.stateMachine
+}
+```
+
+Because you've embedded `flargs.StateMachine`, the struct will automatically implement this interface:
 
 ```go
 type Flarger[T any] interface {
 	Parse([]string) ([]string, error)
 	Load(*Environment) error
+    Run(*Environment) error
 }
 ```
-
-## ParseFunc
-
-A ParseFunc takes in a slice of strings and produces a structure that you define. It consumes some flags and args, and leaves others unparsed, returning them for later parsing. It can return an error indicating the flags and args were insufficient to run your Command.
-
-Its signature is:
-
-```go
-type ParseFunc[T any] func([]string) (T, []string, error)
-```
+But you will want to define at least one of these on your own to get any interesting behaviour.
 
 ## Environment
 
@@ -53,25 +56,15 @@ type Environment struct {
 }
 ```
 
-## RunFunc
-
-This is the meat of the functionality and its signature is:
+This object is injected using dependency injection. Your CLI must use it for all i/o. So:
 
 ```go
-type RunFunc[T any] func(*Environment, T) error
-```
-
-a RunFunc should be hermetic. It should read from `Environment.InputStream` and write to `Environment.Outputsteam`. Although it returns an error, any error information meant to be displayed on a terminal should be sent to `Environment.ErrorStream`.
-
-If you violate these principles, you won't have a happy time. You will not be able to take advantage of the true power of Flargs.
-
-```go
-// badly behaved ☹
+// badly behaved ☹ don't do it
 if os.Getenv("USER") == "sam" {
 	fmt.Println("Sam, I am")
 }
 
-// well behaved ☺
+// well behaved ☺ this is the way
 if env.Variables["USER"] == "sam" {
 	fmt.Fprintln(env.OutputStream, "Sam, I am")
 }
@@ -79,7 +72,7 @@ if env.Variables["USER"] == "sam" {
 
 ## Command
 
-A Command is a RunFunc plus an Environment, along with a way to run the former against the latter. It also has a `Pipe()` for composability.
+A Command is a Konf plus an Environment, along with a way to run the former against the latter. It has `Pipe()` for composability and a handful of helper methods.
 
 ```go
 type Command[T any] struct {
@@ -87,10 +80,10 @@ type Command[T any] struct {
 	runFunc RunFunc[T]
 }
 
-func (com Command[T]) Run(conf T) error {
+func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
 	...
 }
-func (com1 Command[T]) Pipe(conf1 T, env2 *Environment) error {
+func (c Command) ParseAndLoad(args []string) error {
 	...
 }
 ```
@@ -104,45 +97,34 @@ import (
     "github.com/sean9999/go-flargs"
 )
 
-//  our input structure. we only care about one flag.
-type conf struct {
+//  our input structure. we only care about one value: name
+type helloConf struct {
     name string
+    flargs.StateMachine
 }
 
-//  this is our ParseFunc. It returns a *conf
-parseFn := func(args []string) (*conf, []string, error) {
-    params := new(conf)
-    //  default value
-    params.name = "world"
-    fset := flag.NewFlagSet("flargs", flag.ContinueOnError)
-    fset.Func("name", "hello to who?", func(s string) error {
-        if s == "batman" {
-            return errors.New("you cannot say hello to batman")
-        }
-		params.name = s
-		return nil
-	})
-    err := fset.Parse()
-    return params, fset.Args(), err
-}
-
-// this is our RunFunc. it says hello to params.name.
-// it writes to env.OutputStream, which in a real CLI is os.Stdout
-helloFn := func(env *flargs.Environment, params *conf) error {
-    fmt.Fprintf(env.OutputStream, "hello, %s", params.name)
+//  get arg, set name
+func (c *helloConf) Parse(args []string) error {
+    if len(args) > 1 {
+        return errors.New("too many args")
+    }
+    if len(args) == 1 {
+        c.name = args[0]
+    }
+    c.name = "world"
     return nil
 }
 
-//  first parse
-conf, _, err := parseFn(os.Args())
-if err != nil {
-    panic(err)
+//  say hello
+func (c *helloConf) Run(env *Environment) error {
+    fmt.Fprintf(env.OutputStream, "hello %s", c.name)
 }
 
-//  if all goes well, run
+
+conf := new(helloConf)
 env := flargs.NewCLIEnvironment();
-cmd := flargs.NewCommand(env, helloFn)
-cmd.Run(conf)
+cmd := flargs.NewCommand(env, conf)
+cmd.Run()
 ```
 
 This might look pretty verbose for a simple CLI. But we now have a hermetic app that can be easily tested. It can grow in complexity without extra overhead. To test, we might do this:
@@ -150,19 +132,19 @@ This might look pretty verbose for a simple CLI. But we now have a hermetic app 
 ```go
 func TestNewCommand_hello(t *testing.T) {
 
-    //  parse args
-	conf, _, _ := parseFn([]string{"--name", "robin"})
+    conf := new(helloConf)
 
     //  run command in testing mode
 	env := flargs.NewTestingEnvironment(nil)
-	cmd := flargs.NewCommand(env, helloFn)
+	cmd := flargs.NewCommand(env, conf)
+    cmd.Parse([]string{"robin"})
 	cmd.Run(conf)
 
     //  expected output
     want := "hello, robin"
 
     //  actual output
-	got := cmd.Env.GetOutput()
+	got := env.GetOutput()
 
     if want != got.String() {
         t.Errorf("wanted %q but got %q", want, string(got))
