@@ -6,13 +6,11 @@ import (
 	"github.com/sean9999/go-flargs"
 )
 
-type State struct {
-	fileName  string
-	inputText []byte
+type RotKonf struct {
 	flargs.StateMachine
 }
 
-func (s *State) Run(env *flargs.Environment) error {
+func (s *RotKonf) Run(env *flargs.Environment) error {
 
 	//	rotate a rune
 	rot13 := func(r rune) rune {
