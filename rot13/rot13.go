@@ -1,9 +1,10 @@
 package rot13
 
 import (
+	"bufio"
+	"bytes"
 	"io/fs"
 
-	"github.com/joshlf13/rot13"
 	"github.com/sean9999/go-flargs"
 )
 
@@ -37,8 +38,34 @@ func (s *State) Load(env *flargs.Environment) error {
 		return nil
 	}
 }
+
 func (s *State) Run(env *flargs.Environment) error {
-	wr := rot13.NewWriter(env.OutputStream)
-	_, err := wr.Write(s.inputText)
-	return err
+
+	//	rotate a rune
+	rot13 := func(r rune) rune {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			return 'A' + (((r - 'A') + 13) % 26)
+		case r >= 'a' && r <= 'z':
+			return 'a' + (((r - 'a') + 13) % 26)
+		default:
+			return r
+		}
+	}
+
+	//	read in input rune by rune
+	runeStream := bufio.NewReader(bytes.NewReader(s.inputText))
+	result := []byte{}
+	for {
+		if c, _, err := runeStream.ReadRune(); err != nil {
+			break
+		} else {
+			result = append(result, byte(rot13(c)))
+		}
+	}
+
+	//	write result
+	env.OutputStream.Write(result)
+	return nil
+
 }
