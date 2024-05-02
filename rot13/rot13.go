@@ -2,41 +2,14 @@ package rot13
 
 import (
 	"bufio"
-	"bytes"
-	"io/fs"
 
 	"github.com/sean9999/go-flargs"
 )
 
 type State struct {
-	fileName      string
-	inputText     []byte
-	remainingArgs []string
-}
-
-func (s *State) Args() []string {
-	return s.remainingArgs
-}
-func (s *State) Parse(args []string) error {
-	//	let's be naive and take any input
-	if len(args) > 0 {
-		s.fileName = args[0]
-		s.remainingArgs = args[1:]
-	}
-	return nil
-}
-func (s *State) Load(env *flargs.Environment) error {
-	if s.fileName != "" {
-		contents, err := fs.ReadFile(env.Filesystem, s.fileName)
-		if err != nil {
-			return err
-		}
-		s.inputText = contents
-		return nil
-	} else {
-		s.inputText = env.GetInput()
-		return nil
-	}
+	fileName  string
+	inputText []byte
+	flargs.StateMachine
 }
 
 func (s *State) Run(env *flargs.Environment) error {
@@ -54,7 +27,7 @@ func (s *State) Run(env *flargs.Environment) error {
 	}
 
 	//	read in input rune by rune
-	runeStream := bufio.NewReader(bytes.NewReader(s.inputText))
+	runeStream := bufio.NewReader(env.InputStream)
 	result := []byte{}
 	for {
 		if c, _, err := runeStream.ReadRune(); err != nil {
