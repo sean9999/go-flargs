@@ -58,7 +58,6 @@ func NewCLIEnvironment(baseDir string) *Environment {
 
 	//	import parent env vars
 	vars := envAsMap(os.Environ())
-	vars["FLARGS_VERSION"] = "v1.0.1"
 	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
 	realFs := realfs.New()
@@ -86,7 +85,6 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		RandSource:   randomnessProvider,
 		Filesystem:   fstest.MapFS{},
 		Variables: map[string]string{
-			"FLARGS_VERSION":         "v1.0.1",
 			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
 	}
