@@ -21,7 +21,7 @@ type Environment struct {
 	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
-	Randomness   rand.Source
+	RandSource   rand.Source
 	Filesystem   fs.FS
 	Variables    map[string]string
 }
@@ -58,7 +58,6 @@ func NewCLIEnvironment(baseDir string) *Environment {
 
 	//	import parent env vars
 	vars := envAsMap(os.Environ())
-	vars["FLARGS_VERSION"] = "v1.0.1"
 	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
 	realFs := realfs.New()
@@ -67,7 +66,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
-		Randomness:   rand.NewSource(time.Now().UnixNano()),
+		RandSource:   rand.NewSource(time.Now().UnixNano()),
 		Filesystem:   realFs,
 		Variables:    vars,
 	}
@@ -83,10 +82,9 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
-		Randomness:   randomnessProvider,
+		RandSource:   randomnessProvider,
 		Filesystem:   fstest.MapFS{},
 		Variables: map[string]string{
-			"FLARGS_VERSION":         "v1.0.1",
 			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
 	}
