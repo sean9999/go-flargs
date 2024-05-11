@@ -21,7 +21,7 @@ type Environment struct {
 	InputStream  io.ReadWriter
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
-	RandSource   rand.Source
+	Randomness   rand.Source
 	Filesystem   fs.FS
 	Variables    map[string]string
 }
@@ -66,7 +66,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 		InputStream:  os.Stdin,
 		OutputStream: os.Stdout,
 		ErrorStream:  os.Stderr,
-		RandSource:   rand.NewSource(time.Now().UnixNano()),
+		Randomness:   rand.NewSource(time.Now().UnixNano()),
 		Filesystem:   realFs,
 		Variables:    vars,
 	}
@@ -82,7 +82,7 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		InputStream:  new(bytes.Buffer),
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
-		RandSource:   randomnessProvider,
+		Randomness:   randomnessProvider,
 		Filesystem:   fstest.MapFS{},
 		Variables: map[string]string{
 			"FLARGS_EXE_ENVIRONMENT": "testing",

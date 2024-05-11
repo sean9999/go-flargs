@@ -41,7 +41,7 @@ func (p *Params) Parse(args []string) error {
 func (p *Params) Load(env *flargs.Environment) error {
 	//	barf if p.index is higher than the number of proverbs
 	if p.index == 0 {
-		r := rand.New(env.RandSource)
+		r := rand.New(env.Randomness)
 		p.index = r.Intn(NumberOfProverbs)
 	}
 	if NumberOfProverbs <= p.index {
