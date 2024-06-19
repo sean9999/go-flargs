@@ -30,8 +30,10 @@ clean:
 	go clean
 	go clean -modcache
 	rm -f bin/kat bin/noop bin/proverbs bin/rot13
+pkgsite:
+	if [ -z "$$(command -v pkgsite)" ]; then go install golang.org/x/pkgsite/cmd/pkgsite@latest; fi
 
-docs:
+docs: pkgsite
 	pkgsite -open .
 
 publish:

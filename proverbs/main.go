@@ -56,3 +56,10 @@ func (p *Params) Run(env *flargs.Environment) error {
 	_, err := env.OutputStream.Write([]byte(proverb))
 	return err
 }
+
+func RandomProverb() string {
+	i := rand.Intn(NumberOfProverbs)
+	proverb := strings.Split(strings.TrimSpace(Proverbs), "\n")[i]
+	proverb = fmt.Sprintln(proverb)
+	return proverb
+}
