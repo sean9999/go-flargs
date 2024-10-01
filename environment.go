@@ -24,6 +24,7 @@ type Environment struct {
 	Randomness   rand.Source
 	Filesystem   fs.FS
 	Variables    map[string]string
+	Arguments    []string
 }
 
 func (e Environment) GetOutput() []byte {
@@ -69,6 +70,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 		Randomness:   rand.NewSource(time.Now().UnixNano()),
 		Filesystem:   realFs,
 		Variables:    vars,
+		Arguments:    os.Args,
 	}
 	return &env
 }
@@ -87,6 +89,7 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		Variables: map[string]string{
 			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
+		Arguments: []string{},
 	}
 	return &env
 }
@@ -109,6 +112,7 @@ func NewNullEnvironment() *Environment {
 		ErrorStream:  NullDevice{io.Discard},
 		Filesystem:   NullDevice{},
 		Variables:    map[string]string{},
+		Arguments:    []string{},
 	}
 	return &e
 }
