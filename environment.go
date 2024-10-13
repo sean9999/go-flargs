@@ -7,10 +7,9 @@ import (
 	"math/rand"
 	"os"
 	"strings"
-	"testing/fstest"
 	"time"
 
-	realfs "github.com/sean9999/go-real-fs"
+	rfs "github.com/sean9999/go-real-fs"
 )
 
 // Enviroment is an execution environment for a Command.
@@ -22,7 +21,7 @@ type Environment struct {
 	OutputStream io.ReadWriter
 	ErrorStream  io.ReadWriter
 	Randomness   rand.Source
-	Filesystem   fs.FS
+	Filesystem   rfs.WritableFs
 	Variables    map[string]string
 	Arguments    []string
 }
@@ -61,7 +60,7 @@ func NewCLIEnvironment(baseDir string) *Environment {
 	vars := envAsMap(os.Environ())
 	vars["FLARGS_EXE_ENVIRONMENT"] = "cli"
 
-	realFs := realfs.New()
+	realFs := rfs.NewWritable()
 
 	env := Environment{
 		InputStream:  os.Stdin,
@@ -85,7 +84,7 @@ func NewTestingEnvironment(randomnessProvider rand.Source) *Environment {
 		OutputStream: new(bytes.Buffer),
 		ErrorStream:  new(bytes.Buffer),
 		Randomness:   randomnessProvider,
-		Filesystem:   fstest.MapFS{},
+		Filesystem:   rfs.NewWritable(),
 		Variables: map[string]string{
 			"FLARGS_EXE_ENVIRONMENT": "testing",
 		},
@@ -103,6 +102,30 @@ func (b NullDevice) Read(_ []byte) (int, error) {
 }
 func (b NullDevice) Open(_ string) (fs.File, error) {
 	return nil, nil
+}
+
+func (b NullDevice) ReadDir(_ string) ([]fs.DirEntry, error) {
+	return nil, nil
+}
+
+func (b NullDevice) ReadFile(_ string) ([]byte, error) {
+	return nil, nil
+}
+
+func (b NullDevice) Stat(_ string) (fs.FileInfo, error) {
+	return nil, nil
+}
+
+func (b NullDevice) OpenFile(name string, flag int, perm fs.FileMode) (rfs.WritableFile, error) {
+	return nil, nil
+}
+
+func (b NullDevice) Remove(_ string) error {
+	return nil
+}
+
+func (b NullDevice) WriteFile(_ string, _ []byte, _ fs.FileMode) error {
+	return nil
 }
 
 func NewNullEnvironment() *Environment {

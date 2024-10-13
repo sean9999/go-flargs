@@ -2,11 +2,12 @@ package main
 
 import (
 	"bytes"
+	"io/fs"
 	"testing"
-	"testing/fstest"
 
 	"github.com/sean9999/go-flargs"
 	"github.com/sean9999/go-flargs/kat"
+	realfs "github.com/sean9999/go-real-fs"
 )
 
 func TestKat_with_one_arg(t *testing.T) {
@@ -15,12 +16,10 @@ func TestKat_with_one_arg(t *testing.T) {
 
 	konf := new(kat.Konf)
 	env := flargs.NewTestingEnvironment(nil)
-	tmpFs := fstest.MapFS{
-		"base.txt": &fstest.MapFile{
-			Data: want,
-		},
-	}
-	env.Filesystem = tmpFs
+
+	tfs := realfs.NewTestFs()
+	tfs.WriteFile("base.txt", want, fs.ModeIrregular)
+	env.Filesystem = tfs
 
 	katCmd := flargs.NewCommand(konf, env)
 	inputParams := []string{
