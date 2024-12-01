@@ -11,7 +11,7 @@ Flargs is a simple and lightweight framework for building command-line programs 
 Flargs conceives of 3 lifecycles, cleanly seperated:
 
 1. *Parsing Flags and Args (flarging)*. This is the act of parsing arguments and flags into a custom structure (a flarg). The step allows no access to the environment.
-2. *Loading flargs*. This step allows access to an environment is allows further processing and validating.
+2. *Loading flargs*. This step allows access to an environment. It allows further processing and validating.
 3. *Execution*. This is where your command is run. It runs against the object you created in step 1 and 2.
 
 
